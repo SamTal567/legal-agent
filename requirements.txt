@@ -1,0 +1,7 @@
+google-adk>=1.0.0
+litellm
+python-dotenv
+weaviate-client>=4.0.0
+pypdf
+langchain-text-splitters
+langchain-ollama
