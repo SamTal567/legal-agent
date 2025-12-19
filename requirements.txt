@@ -5,3 +5,9 @@ weaviate-client>=4.0.0
 pypdf
 langchain-text-splitters
 langchain-ollama
+fastapi
+uvicorn
+tavily-python
+requests
+aiohttp
+python-docx
