@@ -37,22 +37,34 @@ def retrieve_legal_info(query: str) -> dict:
     print(f"DEBUG: Starting retrieval for {query}...")
     client = get_client()
     try:
-        collection = client.collections.get("LegalDocs")
+        import concurrent.futures
         
-        # 1. Vectorize Query Locally (Ollama)
-        print("DEBUG: Embedding query...")
-        query_vector = get_embeddings().embed_query(query)
-        print("DEBUG: Embedding done.")
-        
-        # 2. Search Cloud
-        print("DEBUG: Querying Weaviate...")
-        response = collection.query.near_vector(
-            near_vector=query_vector,
-            limit=5,
-            return_metadata=["distance"]
-        )
-        print("DEBUG: Weaviate query done.")
-        
+        def _execute_retrieval():
+            collection = client.collections.get("LegalDocs")
+            
+            # 1. Vectorize Query Locally (Ollama)
+            print("DEBUG: Embedding query...")
+            query_vector = get_embeddings().embed_query(query)
+            print("DEBUG: Embedding done.")
+            
+            # 2. Search Cloud
+            print("DEBUG: Querying Weaviate...")
+            response = collection.query.near_vector(
+                near_vector=query_vector,
+                limit=5,
+                return_metadata=["distance"]
+            )
+            print("DEBUG: Weaviate query done.")
+            return response
+
+        # Enforce 15s timeout
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(_execute_retrieval)
+            try:
+                response = future.result(timeout=15)
+            except concurrent.futures.TimeoutError:
+                return {"error": "Retrieval timed out after 15 seconds."}
+
         results = []
         for obj in response.objects:
             results.append({

@@ -17,3 +17,8 @@ env/
 # ADK
 .adk/
 .claude/
+
+# Project Specific
+legal_agent/sessions/
+legal_agent/output/
+verify_*.py

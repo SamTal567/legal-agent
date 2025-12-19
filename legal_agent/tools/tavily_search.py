@@ -12,6 +12,8 @@ except ImportError:
     TAVILY_AVAILABLE = False
     print("WARNING: 'tavily' package not found. Web search will be disabled.")
 
+import concurrent.futures
+
 def search_web(query: str) -> str:
     """
     Searches the web using Tavily API for recent legal cases, news, or judgments.
@@ -25,14 +27,22 @@ def search_web(query: str) -> str:
         tavily_api_key = os.getenv("TAVILY_API_KEY") or "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"
         client = TavilyClient(api_key=tavily_api_key)
 
-        # Perform search with Tavily
-        response = client.search(
-            query=query,
-            search_depth="advanced",  # Use advanced search for better results
-            max_results=5,  # Get top 5 results
-            include_answer=True,  # Include AI-generated answer
-            include_images=False  # Don't include images for text-based results
-        )
+        def _do_search():
+             return client.search(
+                query=query,
+                search_depth="advanced",
+                max_results=5,
+                include_answer=True,
+                include_images=False
+            )
+
+        # Enforce 10s timeout
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(_do_search)
+            try:
+                response = future.result(timeout=10)
+            except concurrent.futures.TimeoutError:
+                return "Error: Web search timed out after 10 seconds."
 
         if not response or not response.get('results'):
             return "No results found."

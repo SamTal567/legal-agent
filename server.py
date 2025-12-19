@@ -80,45 +80,38 @@ except Exception as e:
 # ------------------------
 
 # --- SESSION SERVICE ---
-class InMemorySessionService(BaseSessionService):
-    def __init__(self):
-        self.sessions: Dict[str, Session] = {}
+# --- CONFIG ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "legal_agent", "output")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    async def create_session(self, app_name: str, user_id: str) -> str:
-        s_id = str(uuid.uuid4())
-        self.sessions[s_id] = Session(
-            id=s_id,
-            app_name=app_name,
-            user_id=user_id,
-            events=[]
-        )
-        return s_id
+# --- SESSION SERVICE ---
+# Switched to FilePersistence to save chats across restarts
+from legal_agent.persistence import FileSessionService
 
-    async def get_session(self, app_name: str, user_id: str, session_id: str) -> Optional[Session]:
-        return self.sessions.get(session_id)
-
-    async def update_session(self, session: Session) -> None:
-        self.sessions[session.id] = session
-
-    async def delete_session(self, app_name: str, user_id: str, session_id: str) -> None:
-        if session_id in self.sessions:
-            del self.sessions[session_id]
-
-    async def list_sessions(self, app_name: str, user_id: str) -> List[str]:
-        return list(self.sessions.keys())
-
-session_service = InMemorySessionService()
+session_storage_path = os.path.join(BASE_DIR, "legal_agent", "sessions")
+session_service = FileSessionService(storage_dir=session_storage_path)
 
 # --- APP LIFESPAN ---
-root_agent = None
+# --- APP LIFESPAN ---
+runner_instance = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global root_agent
-    print("Initialize Agent...")
-    from legal_agent.agent import get_agent
-    root_agent = get_agent()
-    print("Agent Initialized.")
+    global runner_instance
+    try:
+        print("Initialize Agent Runner...")
+        # lazy import to avoid circular dep issues if any, ensuring env execution
+        from legal_agent.runner import LegalAgentRunner
+        
+        # Initialize the singleton runner with our session service
+        runner_instance = LegalAgentRunner.get_instance(session_service)
+        print("Agent Runner Initialized.")
+    except Exception as e:
+        print(f"CRITICAL ERROR IN LIFESPAN: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
     yield
     print("Shutting down...")
 
@@ -134,9 +127,7 @@ app.add_middleware(
 )
 
 # --- STATIC FILES ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(BASE_DIR, "legal_agent", "output")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# Config moved to top
 app.mount("/downloads", StaticFiles(directory=OUTPUT_DIR), name="downloads")
 
 # --- MODELS ---
@@ -167,63 +158,21 @@ async def create_session_endpoint():
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     try:
-        # 1. Get Session
+        # 1. Get Session ID
         session_id = request.session_id
         if not session_id:
-            session_id = await session_service.create_session("legal_agent", request.user_id)
-        
-        session = await session_service.get_session("legal_agent", request.user_id, session_id)
-        if not session:
-             # If explicit ID invalid, create new
              session_id = await session_service.create_session("legal_agent", request.user_id)
-             session = await session_service.get_session("legal_agent", request.user_id, session_id)
+        else:
+             # Validate session exists
+             sess = await session_service.get_session("legal_agent", request.user_id, session_id)
+             if not sess:
+                  session_id = await session_service.create_session("legal_agent", request.user_id)
 
-        # 2. Setup Context
-        ctx = InvocationContext(
-            invocation_id=str(uuid.uuid4()),
-            agent=root_agent,
-            session=session,
-            session_service=session_service,
-            agent_states={},
-            end_of_agents={},
-            run_config=RunConfig(response_modalities=['text'])
-        )
+        # 2. Execute Runner
+        # The runner abstraction handles context, user content creation, and the event loop
+        final_text = await runner_instance.run_chat(session_id, request.message, user_id=request.user_id)
 
-        # 3. Add User Input
-        user_content = types.Content(
-            role="user",
-            parts=[types.Part(text=request.message)]
-        )
-        ctx.session.events.append(Event(
-            id=str(uuid.uuid4()),
-            author="user",
-            invocation_id=ctx.invocation_id,
-            content=user_content
-        ))
-
-        # 4. Run Agent
-        final_text = ""
-        iteration_count = 0
-        MAX_ITERATIONS = 30
-        
-        print("DEBUG: Starting Agent Loop...")
-        async for event in root_agent.run_async(ctx):
-             iteration_count += 1
-             # print(f"DEBUG: Event {iteration_count}: {event}") # (Optional: Uncomment specific logs if needed, but keeping it clean for now)
-             
-             if iteration_count >= MAX_ITERATIONS:
-                 print(f"DEBUG: Forced termination after {MAX_ITERATIONS} events.")
-                 final_text += "\n\n[System Error: The agent got stuck in a loop and was forcibly stopped. Please try a more specific query.]"
-                 break
-
-             if event.is_final_response() and event.content and event.content.parts:
-                text_part = ''.join(p.text for p in event.content.parts if p.text)
-                final_text += text_part
-
-        # 5. Persist Session
-        await session_service.update_session(ctx.session)
-
-        # 6. Extract File
+        # 3. Extract File (Logic retained from original)
         filename = None
         # Explicit path check
         path_match = re.search(r'created at:\s*(.*?\.docx)', final_text, re.IGNORECASE)
