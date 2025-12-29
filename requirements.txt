@@ -11,3 +11,4 @@ tavily-python
 requests
 aiohttp
 python-docx
+streamlit

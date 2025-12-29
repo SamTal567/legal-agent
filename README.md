@@ -83,6 +83,21 @@ Use the provided scripts to test functionality:
 -   `verify_chat.py`: Basic chat test.
 -   `verify_session.py`: Tests session persistence (memory).
 
+### Frontend (Streamlit UI)
+
+To use the new chat interface:
+
+1.  **Install Streamlit:**
+    ```bash
+    pip install streamlit
+    ```
+
+2.  **Run the UI:**
+    ```bash
+    streamlit run ui.py
+    ```
+    This will open the application in your browser at `http://localhost:8501`.
+
 ## Project Structure
 
 -   `legal_agent/`: Core logic.

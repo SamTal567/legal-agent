@@ -48,6 +48,7 @@ class LegalAgentRunner:
         # Use the runner's run method which handles event loop and state management
         # Note: Runner.run is a synchronous generator in this version of ADK
         for event in self.runner.run(session_id=session_id, user_id=user_id, new_message=user_content):
+            print(f"DEBUG Event: {event}")
             # Capture the model's text response chunks
             if event.is_final_response() and event.content and event.content.parts:
                 text_part = ''.join(p.text for p in event.content.parts if p.text)
