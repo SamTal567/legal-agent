@@ -35,6 +35,10 @@ An AI-powered legal assistant capable of researching laws, drafting legal docume
     WEAVIATE_URL=your_weaviate_url
     WEAVIATE_API_KEY=your_weaviate_key
     TAVILY_API_KEY=your_tavily_key
+    
+    # Optional: For Gemini
+    GEMINI_API_KEY=your_gemini_key_here
+    LLM_PROVIDER=gemini  # Set to 'gemini' to use Google Gemini
     ```
 
 3.  **Run with Docker Compose:**

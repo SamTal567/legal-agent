@@ -45,14 +45,22 @@ class LegalAgentRunner:
 
         final_text = ""
         
-        # Use the runner's run method which handles event loop and state management
-        # Note: Runner.run is a synchronous generator in this version of ADK
-        for event in self.runner.run(session_id=session_id, user_id=user_id, new_message=user_content):
-            print(f"DEBUG Event: {event}")
-            # Capture the model's text response chunks
-            if event.is_final_response() and event.content and event.content.parts:
-                text_part = ''.join(p.text for p in event.content.parts if p.text)
-                final_text += text_part
+        try:
+            # Use the runner's run method which handles event loop and state management
+            # Note: Runner.run is a synchronous generator in this version of ADK
+            for event in self.runner.run(session_id=session_id, user_id=user_id, new_message=user_content):
+                logger.info(f"DEBUG Event type: {type(event)} Content: {event}")
+                print(f"DEBUG Event: {event}")
+                
+                # Check for standard ModelResponse event from ADK which contains the text
+                if hasattr(event, "content") and event.content and event.content.parts:
+                     text_part = ''.join(p.text for p in event.content.parts if p.text)
+                     print(f"DEBUG Chunk: {text_part}")
+                     final_text += text_part
+        except Exception as e:
+            logger.error(f"Error during agent execution: {e}")
+            print(f"CRITICAL RUNNER ERROR: {e}")
+            raise e
         
         # Explicitly save session state to disk
         # (Assuming the session service is our custom FileSessionService)

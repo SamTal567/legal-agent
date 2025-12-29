@@ -16,12 +16,20 @@ root_agent = None
 def get_agent():
     global root_agent
     if root_agent is None:
-        # Configure OpenRouter (initialized lazily to bind to correct event loop)
-        model_config = LiteLlm(
-            model="openrouter/kwaipilot/kat-coder-pro:free",
-            api_key=os.getenv("OPENROUTER_API_KEY"),
-            api_base="https://openrouter.ai/api/v1"
-        )
+        provider = os.getenv("LLM_PROVIDER", "openrouter").lower()
+
+        if provider == "gemini":
+            model_config = LiteLlm(
+                model="gemini/gemini-2.5-flash-lite",
+                api_key=os.getenv("GEMINI_API_KEY")
+            )
+        else:
+            # Configure OpenRouter (initialized lazily to bind to correct event loop)
+            model_config = LiteLlm(
+                model="openrouter/kwaipilot/kat-coder-pro:free",
+                api_key=os.getenv("OPENROUTER_API_KEY"),
+                api_base="https://openrouter.ai/api/v1"
+            )
 
         root_agent = Agent(
             name="legal_agent",
