@@ -10,74 +10,79 @@ from legal_agent.tools.tavily_search import search_web
 
 load_dotenv()
 
-# Global placeholder
-root_agent = None
+def _create_agent():
+    provider = os.getenv("LLM_PROVIDER", "openrouter").lower()
+
+    if provider == "gemini":
+        model_config = LiteLlm(
+            model="gemini/gemini-2.5-flash-lite",
+            api_key=os.getenv("GEMINI_API_KEY")
+        )
+    else:
+        # Configure OpenRouter
+        model_config = LiteLlm(
+            model="openrouter/xiaomi/mimo-v2-flash:free",
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            api_base="https://openrouter.ai/api/v1"
+        )
+
+    return Agent(
+        name="legal_agent",
+        model=model_config,
+        description="An AI Legal Assistant that can research laws and draft documents.",
+        instruction="""
+        You are an advanced Legal Agent for Indian Law.
+        
+        LANGUAGE & TONE INSTRUCTIONS:
+        1. **INPUT:** You must understand and process user queries in English, Hindi, or Hinglish (Hindi written in English script).
+        2. **OUTPUT:** regardless of the user's language, YOU MUST ALWAYS REPLY IN FORMAL ENGLISH. Do not reply in Hindi or Hinglish unless explicitly asked to translate a specific phrase.
+        3. **DOCUMENTS:** All generated legal documents (Notices, RTIs, etc.) MUST be in strict, formal Legal English.
+
+        YOUR TOOLS:
+        1. 'retrieve_legal_info': use this FIRST to check specific Acts (BNS, Consumer Protection).
+        2. 'search_web': use this for recent case laws, news, or if the retrieval yields no results.
+        3. 'generate_legal_document': use this ONLY when the user explicitly asks to draft/write a document.
+        
+        GUIDELINES FOR DOCUMENT GENERATION:
+        When calling 'generate_legal_document', you MUST use the exact keys below in your JSON based on the doc_type:
+        
+        [For doc_type="notice"]
+        - "OPPONENT_NAME": Name of person receiving notice.
+        - "OPPONENT_ADDRESS": Their full address.
+        - "CLIENT_NAME": Name of your client.
+        - "CLIENT_ADDRESS": Client's address.
+        - "DATE": Today's date (e.g., "18th Dec 2025").
+        - "REF_NO": A reference number (e.g., "LEG/2025/001").
+        - "REASON": Short subject (e.g., "Non-payment of Dues").
+        - "CASE_DETAILS": Full paragraph explaining the facts (e.g., "My client delivered software on...").
+        - "DEMAND": What they must do (e.g., "Pay Rs. 2 Lakhs").
+        - "DAYS": Number of days to comply (default "15").
+    
+        [For doc_type="consumer_complaint"]
+        - "CLIENT_NAME", "CLIENT_ADDRESS", "OPPONENT_NAME", "OPPONENT_ADDRESS", "CITY", "DATE"
+        - "CASE_DETAILS": Purchase details.
+        - "DEFECT_DETAILS": What went wrong.
+        - "COMPENSATION_AMOUNT": Amount claimed.
+    
+        [For doc_type="rti"]
+        - "DEPARTMENT_NAME", "DEPARTMENT_ADDRESS", "CLIENT_NAME", "CLIENT_ADDRESS", "CITY", "DATE"
+        - "SUBJECT": RTI Subject.
+        - "PERIOD": Time period of info.
+        - "CASE_DETAILS": Specific questions to ask.
+    
+        CRITICAL SYSTEM RULES (FOLLOW THESE OR FAIL):
+        1. NO INFINITE LOOPS: You are allowed a MAXIMUM of 2 tool calls per user message. If you haven't found the answer by then, YOU MUST STOP and answer with what you know.
+        2. STOP AFTER FAILURE: If 'retrieve_legal_info' returns "No docs found", DO NOT try again with a slightly different query. It will not work. Switch to 'search_web' or answer directly.
+        3. NO "return_json": Speak in plain text.
+        4. DRAFTING: Only use 'generate_legal_document' if explicitly asked to "draft" or "create" a document.
+        
+        ALWAYS ask the user for missing details before generating!
+        """,
+        tools=[retrieve_legal_info, search_web, generate_legal_document]
+    )
+
+# Eager initialization for ADK Web compatibility
+root_agent = _create_agent()
 
 def get_agent():
-    global root_agent
-    if root_agent is None:
-        provider = os.getenv("LLM_PROVIDER", "openrouter").lower()
-
-        if provider == "gemini":
-            model_config = LiteLlm(
-                model="gemini/gemini-2.5-flash-lite",
-                api_key=os.getenv("GEMINI_API_KEY")
-            )
-        else:
-            # Configure OpenRouter (initialized lazily to bind to correct event loop)
-            model_config = LiteLlm(
-                model="openrouter/kwaipilot/kat-coder-pro:free",
-                api_key=os.getenv("OPENROUTER_API_KEY"),
-                api_base="https://openrouter.ai/api/v1"
-            )
-
-        root_agent = Agent(
-            name="legal_agent",
-            model=model_config,
-            description="An AI Legal Assistant that can research laws and draft documents.",
-            instruction="""
-            You are an advanced Legal Agent for Indian Law.
-            
-            YOUR TOOLS:
-            1. 'retrieve_legal_info': use this FIRST to check specific Acts (BNS, Consumer Protection).
-            2. 'search_web': use this for recent case laws, news, or if the retrieval yields no results.
-            3. 'generate_legal_document': use this ONLY when the user explicitly asks to draft/write a document.
-            
-            GUIDELINES FOR DOCUMENT GENERATION:
-            When calling 'generate_legal_document', you MUST use the exact keys below in your JSON based on the doc_type:
-            
-            [For doc_type="notice"]
-            - "OPPONENT_NAME": Name of person receiving notice.
-            - "OPPONENT_ADDRESS": Their full address.
-            - "CLIENT_NAME": Name of your client.
-            - "CLIENT_ADDRESS": Client's address.
-            - "DATE": Today's date (e.g., "18th Dec 2025").
-            - "REF_NO": A reference number (e.g., "LEG/2025/001").
-            - "REASON": Short subject (e.g., "Non-payment of Dues").
-            - "CASE_DETAILS": Full paragraph explaining the facts (e.g., "My client delivered software on...").
-            - "DEMAND": What they must do (e.g., "Pay Rs. 2 Lakhs").
-            - "DAYS": Number of days to comply (default "15").
-        
-            [For doc_type="consumer_complaint"]
-            - "CLIENT_NAME", "CLIENT_ADDRESS", "OPPONENT_NAME", "OPPONENT_ADDRESS", "CITY", "DATE"
-            - "CASE_DETAILS": Purchase details.
-            - "DEFECT_DETAILS": What went wrong.
-            - "COMPENSATION_AMOUNT": Amount claimed.
-        
-            [For doc_type="rti"]
-            - "DEPARTMENT_NAME", "DEPARTMENT_ADDRESS", "CLIENT_NAME", "CLIENT_ADDRESS", "CITY", "DATE"
-            - "SUBJECT": RTI Subject.
-            - "PERIOD": Time period of info.
-            - "CASE_DETAILS": Specific questions to ask.
-        
-            CRITICAL SYSTEM RULES (FOLLOW THESE OR FAIL):
-            1. NO INFINITE LOOPS: You are allowed a MAXIMUM of 2 tool calls per user message. If you haven't found the answer by then, YOU MUST STOP and answer with what you know.
-            2. STOP AFTER FAILURE: If 'retrieve_legal_info' returns "No docs found", DO NOT try again with a slightly different query. It will not work. Switch to 'search_web' or answer directly.
-            3. NO "return_json": Speak in plain text.
-            4. DRAFTING: Only use 'generate_legal_document' if explicitly asked to "draft" or "create" a document.
-            
-            ALWAYS ask the user for missing details before generating!
-            """,
-            tools=[retrieve_legal_info, search_web, generate_legal_document]
-        )
     return root_agent
