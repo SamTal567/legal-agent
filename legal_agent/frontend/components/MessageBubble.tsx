@@ -1,5 +1,5 @@
 "use client"
-
+import  ReactMarkdown from "react-markdown"
 type MessageBubbleProps = {
   role: "user" | "ai"
   text: string
@@ -34,7 +34,12 @@ export function MessageBubble({ role, text }: MessageBubbleProps) {
       }`}
     >
       {/* // MESSAGE TEXT */}
-      <p className="whitespace-pre-wrap">{text}</p>
+       <ReactMarkdown
+        children={text}
+        // Plain text mode: render text only
+        allowedElements={[]}       // no markdown elements
+        unwrapDisallowed={true}    // unwrap to show text
+      />
 
       {/* // FILE DOWNLOAD LINKS */}
       {matches && (
