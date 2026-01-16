@@ -73,7 +73,7 @@ export default function LoginForm() {
         Login to LegalAI
       </h1>
 
-      // Google Login
+      {/* // Google Login */}
       <Button
         variant="outline"
         className="w-full flex gap-3"

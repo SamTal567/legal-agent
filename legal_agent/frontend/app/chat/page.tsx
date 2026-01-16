@@ -53,7 +53,7 @@ export default function ChatPage() {
 
   const [loading, setLoading] = useState(false)
 
-//  AUTH CHECK & SESSION CREATION
+  // AUTH CHECK & SESSION CREATION
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -79,8 +79,35 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, loading])
 
+  // WORD-BY-WORD TYPING EFFECT
+  const typeAIResponse = (fullText: string) => {
+    const words = fullText.split(" ")
+    let index = 0
+
+    setMessages((prev) => [...prev, { role: "ai", text: "" }])
+
+    const interval = setInterval(() => {
+      setMessages((prev) => {
+        const updated = [...prev]
+        const last = updated[updated.length - 1]
+
+        if (last.role === "ai") {
+          last.text += (index === 0 ? "" : " ") + words[index]
+        }
+
+        return updated
+      })
+
+      index++
+
+      if (index >= words.length) {
+        clearInterval(interval)
+        setLoading(false)
+      }
+    }, 40)
+  }
+
   // SEND MESSAGE
-  
   const sendMessage = async () => {
     if (!input.trim() || !sessionId || loading) return
 
@@ -100,24 +127,17 @@ export default function ChatPage() {
         userId: "default_user",
       })
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "ai",
-          text: res.response || "No response from LegalAI",
-        },
-      ])
+      typeAIResponse(res.response || "No response from LegalAI")
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: " Something went wrong." },
+        { role: "ai", text: "Something went wrong." },
       ])
-    } finally {
       setLoading(false)
     }
   }
 
-//  AUTH CHECKING LOADING STATE
+  // AUTH CHECKING LOADING STATE
   if (checkingAuth) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -128,23 +148,22 @@ export default function ChatPage() {
     )
   }
 
-  
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="h-screen w-full bg-[#f5f5f5] overflow-hidden">
 
-      {/* // SIDEBAR */}
+        {/* SIDEBAR */}
         <AppSidebar />
 
-        {/* // MAIN CHAT AREA */}
+        {/* MAIN CHAT AREA */}
         <div className="flex h-full flex-col md:ml-[16rem]">
           <Navbar />
-{/* //  CHAT CONTENT */}
-          <div className="flex flex-1 flex-col overflow-hidden">
 
+          {/* CHAT CONTENT */}
+          <div className="flex flex-1 flex-col overflow-hidden">
             <MobileSidebarToggle />
 
-            {/* // MESSAGES AREA */}
+            {/* MESSAGES AREA */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4">
               {messages.map((msg, i) => (
                 <MessageBubble
@@ -166,7 +185,7 @@ export default function ChatPage() {
               <div ref={bottomRef} />
             </div>
 
-            {/* // INPUT AREA */}
+            {/* INPUT AREA */}
             <div className="sticky bottom-0 border-t bg-[#f5f5f5] p-3 sm:p-4">
               <div className="relative mx-auto max-w-3xl">
                 <Textarea
