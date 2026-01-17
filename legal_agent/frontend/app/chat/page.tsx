@@ -7,12 +7,7 @@ import { auth } from "@/lib/Firebase"
 
 import Navbar from "@/components/Navbar"
 import AppSidebar from "@/components/Sidebar"
-
-import {
-  SidebarProvider,
-  useSidebar,
-} from "@/components/ui/sidebar"
-
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 
@@ -21,41 +16,42 @@ import { ArrowUp, Loader2, Menu } from "lucide-react"
 import { createSession, sendChatMessage } from "@/lib/api"
 import { MessageBubble } from "@/components/MessageBubble"
 
-// Sidebar toggle for mobile
+/* ---------------- Mobile Sidebar Toggle ---------------- */
 function MobileSidebarToggle() {
   const { toggleSidebar } = useSidebar()
 
   return (
     <div className="md:hidden px-3 pt-3">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleSidebar}
-      >
+      <Button variant="ghost" size="icon" onClick={toggleSidebar}>
         <Menu className="h-5 w-5" />
       </Button>
     </div>
   )
 }
 
-// Chat Page
+/* ---------------- Types ---------------- */
+type ChatMessage = {
+  id: string
+  role: "user" | "ai"
+  text: string
+}
+
+/* ---------------- Chat Page ---------------- */
 export default function ChatPage() {
   const router = useRouter()
   const bottomRef = useRef<HTMLDivElement>(null)
+  const typingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [sessionId, setSessionId] = useState<string | null>(null)
 
   const [input, setInput] = useState("")
-  const [messages, setMessages] = useState<
-    { role: "user" | "ai"; text: string }[]
-  >([])
-
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
 
-  // AUTH CHECK & SESSION CREATION
+  /* ---------------- Auth + Session ---------------- */
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.replace("/auth")
         return
@@ -71,43 +67,48 @@ export default function ChatPage() {
       }
     })
 
-    return () => unsubscribe()
+    return () => unsub()
   }, [router])
 
-  // SCROLL TO BOTTOM ON NEW MESSAGE
+  /* ---------------- Auto Scroll ---------------- */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, loading])
+  }, [messages])
 
-  // WORD-BY-WORD TYPING EFFECT
+  /* ---------------- Typing Effect ---------------- */
   const typeAIResponse = (fullText: string) => {
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current)
+    }
+
     const words = fullText.split(" ")
     let index = 0
+    const aiMessageId = crypto.randomUUID()
 
-    setMessages((prev) => [...prev, { role: "ai", text: "" }])
+    setMessages((prev) => [
+      ...prev,
+      { id: aiMessageId, role: "ai", text: "" },
+    ])
 
-    const interval = setInterval(() => {
-      setMessages((prev) => {
-        const updated = [...prev]
-        const last = updated[updated.length - 1]
-
-        if (last.role === "ai") {
-          last.text += (index === 0 ? "" : " ") + words[index]
-        }
-
-        return updated
-      })
+    typingIntervalRef.current = setInterval(() => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === aiMessageId
+            ? { ...msg, text: words.slice(0, index + 1).join(" ") }
+            : msg
+        )
+      )
 
       index++
 
       if (index >= words.length) {
-        clearInterval(interval)
-        setLoading(false)
+        clearInterval(typingIntervalRef.current!)
+        typingIntervalRef.current = null
       }
-    }, 40)
+    }, 35)
   }
 
-  // SEND MESSAGE
+  /* ---------------- Send Message ---------------- */
   const sendMessage = async () => {
     if (!input.trim() || !sessionId || loading) return
 
@@ -117,7 +118,11 @@ export default function ChatPage() {
 
     setMessages((prev) => [
       ...prev,
-      { role: "user", text: userText },
+      {
+        id: crypto.randomUUID(),
+        role: "user",
+        text: userText,
+      },
     ])
 
     try {
@@ -127,17 +132,16 @@ export default function ChatPage() {
         userId: "default_user",
       })
 
-      typeAIResponse(res.response || "No response from LegalAI")
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "ai", text: "Something went wrong." },
-      ])
       setLoading(false)
+      typeAIResponse(res.response || "No response from LegalAI.")
+    } catch (err) {
+      console.error(err)
+      setLoading(false)
+      typeAIResponse("Something went wrong. Please try again.")
     }
   }
 
-  // AUTH CHECKING LOADING STATE
+  /* ---------------- Auth Loading ---------------- */
   if (checkingAuth) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -148,26 +152,23 @@ export default function ChatPage() {
     )
   }
 
+  /* ---------------- UI ---------------- */
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="h-screen w-full bg-[#f5f5f5] overflow-hidden">
-
-        {/* SIDEBAR */}
         <AppSidebar />
 
-        {/* MAIN CHAT AREA */}
         <div className="flex h-full flex-col md:ml-[16rem]">
           <Navbar />
 
-          {/* CHAT CONTENT */}
           <div className="flex flex-1 flex-col overflow-hidden">
             <MobileSidebarToggle />
 
-            {/* MESSAGES AREA */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-4">
-              {messages.map((msg, i) => (
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((msg) => (
                 <MessageBubble
-                  key={i}
+                  key={msg.id}
                   role={msg.role}
                   text={msg.text}
                 />
@@ -185,11 +186,12 @@ export default function ChatPage() {
               <div ref={bottomRef} />
             </div>
 
-            {/* INPUT AREA */}
-            <div className="sticky bottom-0 border-t bg-[#f5f5f5] p-3 sm:p-4">
+            {/* Input */}
+            <div className="border-t bg-[#f5f5f5] p-4">
               <div className="relative mx-auto max-w-3xl">
                 <Textarea
                   rows={1}
+                  disabled={!sessionId || loading}
                   placeholder="Ask LegalAI..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -216,7 +218,6 @@ export default function ChatPage() {
                 </Button>
               </div>
             </div>
-
           </div>
         </div>
       </div>
