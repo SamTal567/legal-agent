@@ -34,12 +34,49 @@ export function MessageBubble({ role, text }: MessageBubbleProps) {
       }`}
     >
       {/* // MESSAGE TEXT */}
-       <ReactMarkdown
-        children={text}
-        // Plain text mode: render text only
-        allowedElements={[]}       // no markdown elements
-        unwrapDisallowed={true}    // unwrap to show text
-      />
+      
+
+<ReactMarkdown
+  children={text}
+  allowedElements={[
+    "p",
+    "h3",
+    "h4",
+    "ul",
+    "ol",
+    "li",
+    "strong",
+    "em",
+    "br"
+  ]}
+  components={{
+    p: ({ children }) => (
+      <p className="mb-3 last:mb-0">{children}</p>
+    ),
+    ul: ({ children }) => (
+      <ul className="list-disc ml-5 mb-3 space-y-1">
+        {children}
+      </ul>
+    ),
+    ol: ({ children }) => (
+      <ol className="list-decimal ml-5 mb-3 space-y-1">
+        {children}
+      </ol>
+    ),
+    li: ({ children }) => <li>{children}</li>,
+    h3: ({ children }) => (
+      <h3 className="font-semibold text-base mb-2">
+        {children}
+      </h3>
+    ),
+    h4: ({ children }) => (
+      <h4 className="font-medium text-sm mb-2">
+        {children}
+      </h4>
+    ),
+  }}
+/>
+
 
       {/* // FILE DOWNLOAD LINKS */}
       {matches && (
