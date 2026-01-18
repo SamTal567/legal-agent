@@ -12,3 +12,6 @@ requests
 aiohttp
 python-docx
 streamlit
+langchain-community
+langchain-ollama
+pypdf

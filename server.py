@@ -107,6 +107,41 @@ async def lifespan(app: FastAPI):
         # Initialize the singleton runner with our session service
         runner_instance = LegalAgentRunner.get_instance(session_service)
         print("Agent Runner Initialized.")
+        
+        # --- AUTO-INGESTION ---
+        print("Checking Weaviate status...")
+        try:
+            import weaviate
+            from weaviate.auth import AuthApiKey
+            from legal_agent.ingest import ingest
+            
+            w_url = os.getenv("WEAVIATE_URL")
+            w_key = os.getenv("WEAVIATE_API_KEY")
+            
+            if w_url:
+                client = weaviate.connect_to_weaviate_cloud(
+                    cluster_url=w_url,
+                    auth_credentials=AuthApiKey(w_key) if w_key else None
+                )
+                try:
+                    cols = client.collections.list_all()
+                    if "LegalDocs" not in cols:
+                         print("LegalDocs collection missing. Starting Auto-Ingestion...")
+                         ingest()
+                    else:
+                         # Optional: Check if empty
+                         coll = client.collections.get("LegalDocs")
+                         count = coll.aggregate.over_all(total_count=True).total_count
+                         if count == 0:
+                             print("LegalDocs collection empty. Starting Auto-Ingestion...")
+                             ingest()
+                         else:
+                             print(f"LegalDocs collection exists ({count} docs). Skipping ingestion.")
+                finally:
+                    client.close()
+        except Exception as e:
+            print(f"Auto-ingestion check failed: {e}")
+        # ----------------------
     except Exception as e:
         print(f"CRITICAL ERROR IN LIFESPAN: {e}")
         import traceback
