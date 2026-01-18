@@ -14,7 +14,9 @@ def get_embeddings():
     if embeddings is None:
         try:
             from langchain_ollama import OllamaEmbeddings
-            embeddings = OllamaEmbeddings(model="nomic-embed-text")
+            base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            print(f"DEBUG: Using Ollama at {base_url}")
+            embeddings = OllamaEmbeddings(model="nomic-embed-text", base_url=base_url)
         except ImportError:
             print("WARNING: langchain-ollama not found (unexpected). Using Mock.")
             class MockEmbeddings:
@@ -51,7 +53,7 @@ def retrieve_legal_info(query: str) -> dict:
             print("DEBUG: Querying Weaviate...")
             response = collection.query.near_vector(
                 near_vector=query_vector,
-                limit=5,
+                limit=10,
                 return_metadata=["distance"]
             )
             print("DEBUG: Weaviate query done.")

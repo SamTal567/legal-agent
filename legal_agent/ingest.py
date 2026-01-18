@@ -11,7 +11,8 @@ load_dotenv()
 
 def ingest():
     print("--- Starting Ingestion ---")
-    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    embeddings = OllamaEmbeddings(model="nomic-embed-text", base_url=base_url)
     
     # Connect
     client = weaviate.connect_to_weaviate_cloud(
@@ -49,7 +50,7 @@ def ingest():
             if file.endswith(".pdf"):
                 print(f"Processing {file}...")
                 loader = PyPDFLoader(os.path.join(data_path, file))
-                chunks = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50).split_documents(loader.load())
+                chunks = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200).split_documents(loader.load())
                 
                 with collection.batch.dynamic() as batch:
                     for chunk in chunks:
