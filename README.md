@@ -1,34 +1,30 @@
 # Legal Agent API
 
-An AI-powered legal assistant capable of researching laws, drafting legal documents, and searching the web for real-time legal information. Built with Google ADK, FastAPI, and Weaviate.
+An AI-powered legal assistant capable of researching laws, drafting legal documents, and searching the web for real-time legal information. Built with Google ADK, FastAPI, Weaviate, and a Next.js Frontend.
 
-**Now with persistent sessions and Docker support!**
+**Now with persistent sessions, Dockerized backend, and a modern Web UI!**
 
 ## Features
 
-- **RAG (Retrieval-Augmented Generation):** Retrieve relevant legal context from a Weaviate vector database.
-- **Web Search:** Real-time search capabilities using Tavily API for up-to-date legal info.
-- **Document Drafting:** Generate legal documents (e.g., RTI applications, Legal Notices) when explicitly requested.
-- **Persistent Sessions:** Chat history is saved to disk (`legal_agent/sessions`) and preserved across server restarts.
-- **Dockerized:** Ready to run in any environment with `docker-compose`.
-- **Robustness:** Includes timeouts for external APIs and loop prevention logic.
+- **RAG (Retrieval-Augmented Generation):** Retrieve relevant legal context from a Weaviate vector database (RTI, RERA, BNS).
+- **Web Search:** Real-time search capabilities using Tavily API for up-to-date legal info (Supreme Court judgments).
+- **Document Drafting:** Generate legal documents (e.g., RTI applications, Legal Notices) downloadable as `.docx`.
+- **Persistent Sessions:** Chat history is saved to disk and preserved across server restarts.
+- **Modern UI:** A responsive chat interface built with Next.js.
 
 ## Prerequisites
 
-- **Docker & Docker Compose** (Recommended)
+- **Docker & Docker Compose** (Recommended for Backend)
+- **Node.js & Bun/npm** (For Frontend)
 - **Ollama:** Installed and running locally (for embeddings).
   - Pull the embedding model: `ollama pull nomic-embed-text`
 - **Keys:** OpenRouter, Weaviate, Tavily.
 
-## Quick Start (Docker)
+## Quick Start
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd legal-agent
-    ```
+### 1. Backend (Docker)
 
-2.  **Configure Environment:**
+1.  **Configure Environment:**
     Create a `.env` file in the root directory:
     ```env
     OPENROUTER_API_KEY=your_key_here
@@ -41,78 +37,50 @@ An AI-powered legal assistant capable of researching laws, drafting legal docume
     LLM_PROVIDER=gemini  # Set to 'gemini' to use Google Gemini
     ```
 
-3.  **Run with Docker Compose:**
+2.  **Run with Docker Compose:**
     ```bash
     docker-compose up --build
     ```
-    The server will start at `http://localhost:8002`.
+    The Backend API will start at `http://localhost:8002`.
 
-## Manual Installation
+### 2. Frontend (Next.js)
 
-If you prefer running without Docker:
-
-1.  **Create venv:**
+1.  **Navigate to Frontend Directory:**
     ```bash
-    python -m venv venv
-    source venv/bin/activate  # or .\venv\Scripts\activate on Windows
+    cd legal_agent/frontend
     ```
 
-2.  **Install dependencies:**
+2.  **Install Dependencies:**
     ```bash
-    pip install -r requirements.txt
+    bun install  # or npm install
     ```
 
-3.  **Run Server:**
+3.  **Run Development Server:**
     ```bash
-    python server.py
+    bun run dev  # or npm run dev
     ```
+    The UI will be available at `http://localhost:3000`.
+
+## Architecture
+
+-   **Backend:** FastAPI server (`server.py`) handling chat logic, session management, and RAG.
+-   **Agent Engine:** Google ADK agent (`legal_agent/agent.py`) running inside a persistent Runner (`legal_agent/runner.py`).
+-   **Database:** Weaviate Cloud (Vector DB) for storing legal acts.
+-   **Frontend:** Next.js application interacting with the Backend API.
 
 ## Usage
 
-### API Documentation (Swagger UI)
+1.  Open the frontend at `http://localhost:3000`.
+2.  Start chatting!
+    *   *Ask questions:* "What is the punishment for Snatching under BNS?"
+    *   *Draft documents:* "Draft a legal notice for my tenant."
+    *   *Search web:* "Latest Supreme Court judgment on Privacy."
+3.  Generated documents will be provided as downloadable links in the chat.
 
-Visit **http://localhost:8002/docs** to interact with the API endpoints:
+## Verification Scripts
 
--   `GET /`: Health check.
--   `POST /session`: Create a new chat session.
--   `POST /chat`: Send a message to the agent.
-    -   **Payload:** `{"message": "Query", "session_id": "optional-uuid", "user_id": "optional-user"}`
-    -   If a `session_id` is provided, the agent loads previous context.
--   `GET /downloads/{filename}`: Download generated documents.
+Use the provided scripts in the root directory to test backend functionality directly:
 
-### Verification Scripts
-
-Use the provided scripts to test functionality:
-
+-   `test_suite.py`: Comprehensive functionality test (Connectivity, RAG, Web Search).
 -   `verify_chat.py`: Basic chat test.
--   `verify_session.py`: Tests session persistence (memory).
-
-### Frontend (Streamlit UI)
-
-To use the new chat interface:
-
-1.  **Install Streamlit:**
-    ```bash
-    pip install streamlit
-    ```
-
-2.  **Run the UI:**
-    ```bash
-    streamlit run ui.py
-    ```
-    This will open the application in your browser at `http://localhost:8501`.
-
-## Project Structure
-
--   `legal_agent/`: Core logic.
-    -   `agent.py`: Agent definition (Lazy loaded).
-    -   `runner.py`: Persistent Runner execution layer.
-    -   `persistence.py`: File-based session storage logic.
-    -   `tools/`: RAG, Search, and Document Generation tools.
--   `server.py`: FastAPI server.
--   `Dockerfile` & `docker-compose.yml`: Containerization logic.
-
-## Notes
-
--   **Ollama Embeddings:** Ensure your Ollama instance is accessible to the container (if using Docker, you might need to use `host.docker.internal` in your code if you change the embedding configuration).
--   **Anti-Hang:** The server uses `LegalAgentRunner` to manage the ADK lifecycle, preventing infinite loops and ensuring timely responses.
+-   `verify_session.py`: Tests session persistence.
