@@ -10,7 +10,7 @@
 > **Democratizing legal access with Generative AI.**  
 > Research laws, draft documents, and get real-time legal advice grounded in the Bharatiya Nyaya Sanhita (BNS) and other Indian acts.
 
-![Hero Image](images/Screenshot%202026-01-19%20184105.png)
+![Hero Image](images/hero_banner.png)
 
 ---
 
@@ -128,8 +128,8 @@ Remembers user details (Name, Case ID) across sessions, allowing for continuous 
 ## 📸 Screenshots
 
 <div style="display: flex; gap: 10px;">
-  <img src="images/Screenshot%202026-01-19%20183650.png" width="45%" />
-  <img src="images/Screenshot%202026-01-19%20183623.png" width="45%" />
+  <img src="images/chat_interface.png" width="45%" />
+  <img src="images/document_drafting.png" width="45%" />
 </div>
 
 ---
