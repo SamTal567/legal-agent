@@ -1,86 +1,137 @@
-# Legal Agent API
+# ⚖️ AI Legal Agent
 
-An AI-powered legal assistant capable of researching laws, drafting legal documents, and searching the web for real-time legal information. Built with Google ADK, FastAPI, Weaviate, and a Next.js Frontend.
+![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009485?logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)
+![Weaviate](https://img.shields.io/badge/Weaviate-Vector_DB-green?logo=weaviate&logoColor=white)
 
-**Now with persistent sessions, Dockerized backend, and a modern Web UI!**
+> **Democratizing legal access with Generative AI.**  
+> Research laws, draft documents, and get real-time legal advice grounded in the Bharatiya Nyaya Sanhita (BNS) and other Indian acts.
 
-## Features
+![Hero Image](images/Screenshot%202026-01-19%20184105.png)
 
-- **RAG (Retrieval-Augmented Generation):** Retrieve relevant legal context from a Weaviate vector database (RTI, RERA, BNS).
-- **Web Search:** Real-time search capabilities using Tavily API for up-to-date legal info (Supreme Court judgments).
-- **Document Drafting:** Generate legal documents (e.g., RTI applications, Legal Notices) downloadable as `.docx`.
-- **Persistent Sessions:** Chat history is saved to disk and preserved across server restarts.
-- **Modern UI:** A responsive chat interface built with Next.js.
+---
 
-## Prerequisites
+## 🚀 Overview
 
-- **Docker & Docker Compose** (Recommended for Backend)
-- **Node.js & Bun/npm** (For Frontend)
-- **Ollama:** Installed and running locally (for embeddings).
-  - Pull the embedding model: `ollama pull nomic-embed-text`
-- **Keys:** OpenRouter, Weaviate, Tavily.
+The **Legal Agent** is a sophisticated AI assistant designed to bridge the gap between complex legal jargon and the common man. It combines **RAG (Retrieval-Augmented Generation)** with **Real-Time Web Search** to provide accurate, context-aware legal assistance.
 
-## Quick Start
+Whether you need to understand the punishment for "Snatching" under the new laws or draft a specialized Legal Notice, this agent has you covered.
+
+---
+
+## 🛠️ Tech Stack
+
+### **Backend**
+| Component | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Framework** | ![FastAPI](https://img.shields.io/badge/-FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white) | High-performance Async API |
+| **Agent Engine** | **Google ADK** | Structured reasoning & loop management |
+| **Database** | ![Weaviate](https://img.shields.io/badge/-Weaviate-01A31C?style=flat-square&logo=weaviate&logoColor=white) | Vector Database for RAG (BNS, RTI, RERA) |
+| **LLM** | ![OpenRouter](https://img.shields.io/badge/-OpenRouter-743EC7?style=flat-square) | Access to Gemini & other top-tier models |
+| **Persistence** | **File-Based** | JSON storage for chat sessions & memory |
+
+### **Frontend**
+| Component | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Framework** | ![Next.js](https://img.shields.io/badge/-Next.js-000000?style=flat-square&logo=next.js&logoColor=white) | React-based modern UI |
+| **Styling** | ![Tailwind](https://img.shields.io/badge/-Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) | Responsive design |
+| **Runtime** | ![Bun](https://img.shields.io/badge/-Bun-FBF0DF?style=flat-square&logo=bun&logoColor=black) | Fast JS runtime & package manager |
+
+---
+
+## 📂 Project Structure
+
+```bash
+legal-agent/
+├── 🐳 docker-compose.yml       # Orchestration for Backend & Weaviate conn
+├── 🐳 Dockerfile               # Backend container definition
+├── 📄 requirements.txt         # Python dependencies
+├── 📜 server.py                # FastAPI Entry Point
+│
+├── 📂 legal_agent/             # Core Logical Module
+│   ├── 🧠 agent.py             # Google ADK Agent Definition
+│   ├── 🏃 runner.py            # Event Loop & State Management
+│   ├── 💾 persistence.py       # Session Storage Logic
+│   │
+│   ├── 🛠️ tools/               # Agent Capabilities
+│   │   ├── retrieval.py        # RAG (Weaviate)
+│   │   ├── tavily_search.py    # Web Search
+│   │   └── doc_generator.py    # Document Drafting
+│   │
+│   └── 💻 frontend/            # Next.js Web Application
+│       ├── app/                # App Router Pages
+│       └── components/         # UI Components (ChatBubble, Input)
+│
+└── 📂 images/                  # Project Screenshots
+```
+
+---
+
+## ✨ Features
+
+### 1. 🔍 Contextual RAG
+Uses **Weaviate** to index and retrieve granular legal sections from:
+*   *Bharatiya Nyaya Sanhita (BNS) 2023*
+*   *RTI Act 2005*
+*   *RERA Act 2016*
+
+### 2. 🌍 Live Web Search
+Integrated with **Tavily API** to fetch post-knowledge-cutoff updates, such as the latest Supreme Court judgments from 2024-2025.
+
+### 3. 📝 Automated Drafting
+Can fill specialized legal templates to generate downloadable **.docx** files for:
+*   *Legal Notices*
+*   *RTI Applications*
+*   *Consumer Complaints*
+
+### 4. 🧠 Persistent Memory
+Remembers user details (Name, Case ID) across sessions, allowing for continuous long-term consultation.
+
+---
+
+## ⚡ Quick Start
 
 ### 1. Backend (Docker)
 
-1.  **Configure Environment:**
-    Create a `.env` file in the root directory:
+**Prerequisites:** Docker, Ollama (`ollama pull nomic-embed-text`)
+
+1.  **Configure `.env`**:
     ```env
-    OPENROUTER_API_KEY=your_key_here
-    WEAVIATE_URL=your_weaviate_url
-    WEAVIATE_API_KEY=your_weaviate_key
-    TAVILY_API_KEY=your_tavily_key
-    
-    # Optional: For Gemini
-    GEMINI_API_KEY=your_gemini_key_here
-    LLM_PROVIDER=gemini  # Set to 'gemini' to use Google Gemini
+    OPENROUTER_API_KEY=sk-or-...
+    WEAVIATE_URL=https://...
+    WEAVIATE_API_KEY=...
+    TAVILY_API_KEY=tvly-...
+    OLLAMA_BASE_URL=http://host.docker.internal:11434
     ```
 
-2.  **Run with Docker Compose:**
+2.  **Start Services**:
     ```bash
     docker-compose up --build
     ```
-    The Backend API will start at `http://localhost:8002`.
+    *API running at `http://localhost:8002`*
 
 ### 2. Frontend (Next.js)
 
-1.  **Navigate to Frontend Directory:**
+1.  **Install & Run**:
     ```bash
     cd legal_agent/frontend
+    bun install
+    bun run dev
     ```
+    *UI running at `http://localhost:3000`*
 
-2.  **Install Dependencies:**
-    ```bash
-    bun install  # or npm install
-    ```
+---
 
-3.  **Run Development Server:**
-    ```bash
-    bun run dev  # or npm run dev
-    ```
-    The UI will be available at `http://localhost:3000`.
+## 📸 Screenshots
 
-## Architecture
+<div style="display: flex; gap: 10px;">
+  <img src="images/Screenshot%202026-01-19%20183650.png" width="45%" />
+  <img src="images/Screenshot%202026-01-19%20183623.png" width="45%" />
+</div>
 
--   **Backend:** FastAPI server (`server.py`) handling chat logic, session management, and RAG.
--   **Agent Engine:** Google ADK agent (`legal_agent/agent.py`) running inside a persistent Runner (`legal_agent/runner.py`).
--   **Database:** Weaviate Cloud (Vector DB) for storing legal acts.
--   **Frontend:** Next.js application interacting with the Backend API.
+---
 
-## Usage
-
-1.  Open the frontend at `http://localhost:3000`.
-2.  Start chatting!
-    *   *Ask questions:* "What is the punishment for Snatching under BNS?"
-    *   *Draft documents:* "Draft a legal notice for my tenant."
-    *   *Search web:* "Latest Supreme Court judgment on Privacy."
-3.  Generated documents will be provided as downloadable links in the chat.
-
-## Verification Scripts
-
-Use the provided scripts in the root directory to test backend functionality directly:
-
--   `test_suite.py`: Comprehensive functionality test (Connectivity, RAG, Web Search).
--   `verify_chat.py`: Basic chat test.
--   `verify_session.py`: Tests session persistence.
+Made with ❤️ for the Hackathon.
